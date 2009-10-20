@@ -1,0 +1,266 @@
+\documentclass{beamer}
+
+\usetheme{Darmstadt}
+\setbeamerfont*{frametitle}{size=\normalsize,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+
+\usepackage[english]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{ulem}
+\usepackage{listings}
+
+
+\title{MongoDB}
+\subtitle{Or how I learned to stop worrying and love document-oriented databases}
+\author{Mathias Stearn \\ 10gen}
+\date{October 22th, 2009}
+
+%\AtBeginSection[]
+%{
+  %\begin{frame}<beamer>{Outline}
+    %\tableofcontents[currentsection]
+  %\end{frame}
+%}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\section[Outline]{}
+\frame{\tableofcontents}
+
+\section{What is MongoDB?}
+\subsection{Document Oriented}
+\begin{frame}[fragile]
+  \frametitle{Basics}
+
+  \begin{itemize}
+    \item Document Oriented
+    \item Schemaless
+    \item JSON-like (BSON)
+    \item Dynamic, Strong Typing
+    \item Database can ``reach into'' objects
+    \item Organized into Databases and Collections (like Tables)
+  \end{itemize}
+
+  \begin{verbatim}
+  db.people.insert({
+    _id: "mstearn",
+    name: "Mathias Stearn",
+    karma: 42,
+    active: true,
+    birthdate: new Date(2009, 04, 31),
+    languages: ["C++", "Python", "JavaScript"],
+    subobject: {foo: "bar"}
+  });
+  \end{verbatim}
+
+\end{frame}
+
+\subsection{JavaScript Enabled}
+\begin{frame}[fragile]
+  JavaScript used for:
+  \begin{itemize}
+    \item Shell and Documentation
+    \item (Very) Advanced Queries
+    \item ``Group By'' Queries
+    \item Map Reduce (new)
+  \end{itemize}
+
+  \begin{verbatim}
+  db.users.find({$where: "this.a + this.b >= 42"});
+  db.posts.group(
+    { key: "user"
+    , initial: {count:0, comments:0}
+    , reduce: function(doc,out){
+        out.count++;
+        out.comments += doc.comments.length; }
+    , finalize: function(out){ 
+        out.avg = out.comments / out.count; }
+    });
+  \end{verbatim}
+\end{frame}
+
+\subsection{Scalable, Available,  and Reliable}
+\begin{frame}
+  \begin{itemize}
+  \item MMAP database files to use available RAM
+  \item Master-Slave replication for Availability and Reliability
+    \begin{itemize}
+      \item Replica-Pairs support auto-negotiation for master
+    \end{itemize}
+  \item Auto-Sharding for Horizontal Scalability
+    \begin{itemize}
+      \item Distributes based on specified field
+      \item Currently alpha
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\section{What Makes Mongo Special?}
+
+\subsection{Native Language Support}
+
+\begin{frame}[fragile]
+  \frametitle{Simple}
+
+  \begin{block}{Official}
+    \begin{itemize}
+      \item Python
+      \item Ruby
+      \item C++
+      \item Perl
+      \item PHP
+      \item Java
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Third-Party}
+    Erlang,
+    C\#,
+    ColdFusion,
+    {\it and More}
+  \end{block}
+  
+\end{frame}
+
+\subsection{Dynamic Queries}
+
+\begin{frame}[fragile]
+  \frametitle{Simple}
+
+  \begin{verbatim}
+  db.posts.findOne({ user: "mstearn" });
+
+  var cursor = db.posts.find({ user: "mstearn" });
+  cursor.forEach(function(){
+    doSomething(this.text);
+  });
+  \end{verbatim}
+  
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Sorted}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn" }
+  ).sort({timestamp:-1})
+  \end{verbatim}
+  
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Paginated}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn" }
+  ).sort({timestamp:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Simple Tag Search}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: "mongo"
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Complex Tag Search}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: {$in: ["mongo", "mongodb"]}
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Nested Objects}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: {$in: ["mongo", "mongodb"]}
+    , comments.user: "mdirolf"
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Regular Expressions}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: {$in: ["mongo", "mongodb"]}
+    , comments.user: "mdirolf"
+    , text: /windows/i
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Ranges}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: {$in: ["mongo", "mongodb"]}
+    , comments.user: "mdirolf"
+    , text: /windows/i
+    , points: {$gt: 10, $lt 100}
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+  
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Arbitrary JavaScript}
+
+  \begin{verbatim}
+  db.posts.find(
+    { user: "mstearn"
+    , tags: {$in: ["mongo", "mongodb"]}
+    , comments.user: "mdirolf"
+    , text: /windows/i
+    , points: {$gt: 10, $lt 100}
+    , $where: "this.a + this.b >= 42"
+    }
+  ).sort({ts:-1}).skip(10).limit(10);
+  \end{verbatim}
+\end{frame}
+  
+\section{Blog Example}
+\subsection{}
+
+\section{Links}
+\subsection{}
+
+\begin{frame}{Links}
+  \begin{itemize}
+    \item http://www.mongodb.org
+    \item \#mongodb on irc.freenode.net
+    \item mongodb-user on google groups
+    \item mathias@10gen.com
+  \end{itemize}
+\end{frame}
+
+\end{document}
+
+% vim: set softtabstop=2
