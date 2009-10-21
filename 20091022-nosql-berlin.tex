@@ -1,8 +1,9 @@
 \documentclass{beamer}
 
-\usetheme{Darmstadt}
+\usetheme{Warsaw}
 \setbeamerfont*{frametitle}{size=\normalsize,series=\bfseries}
 \setbeamertemplate{navigation symbols}{}
+%\usefonttheme{professionalfonts}
 
 \usepackage[english]{babel}
 \usepackage[utf8x]{inputenc}
@@ -10,32 +11,52 @@
 \usepackage[T1]{fontenc}
 \usepackage{ulem}
 \usepackage{listings}
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{hyperref}
 
+% adds the \MongoLogo command to put the logo on a slide
+\pgfdeclareimage[height=0.8cm]{logo}{logo-mongodb-ondark.png}
+\usepackage[absolute,overlay]{textpos}
+\setlength{\TPHorizModule}{1mm}
+\setlength{\TPVertModule}{1mm}
+\newcommand{\MongoLogo}{%
+\begin{textblock}{14}(2.0,0.7)
+  \pgfuseimage{logo}
+\end{textblock}
+}
 
 \title{MongoDB}
-\subtitle{Or how I learned to stop worrying and love document-oriented databases}
-\author{Mathias Stearn \\ 10gen}
+\subtitle{Or how I learned to stop worrying and love the database}
+\author{Mathias Stearn}
+\institute{10gen}
 \date{October 22th, 2009}
 
 %\AtBeginSection[]
 %{
-  %\begin{frame}<beamer>{Outline}
+  %\begin{frame}<beamer>{}
     %\tableofcontents[currentsection]
   %\end{frame}
 %}
 
 \begin{document}
 
-\frame{\titlepage}
+\begin{frame}
+  \MongoLogo
+  \titlepage
+\end{frame}
 
 \section[Outline]{}
-\frame{\tableofcontents}
+\begin{frame}
+  \MongoLogo
+  \tableofcontents
+\end{frame}
 
 \section{What is MongoDB?}
 \subsection{Document Oriented}
 \begin{frame}[fragile]
-  \frametitle{Basics}
-
+  \MongoLogo
   \begin{itemize}
     \item Organized into Databases and Collections (like Tables)
     \item Document Oriented
@@ -52,7 +73,7 @@ db.people.insert({
   name: "Mathias Stearn",
   karma: 42,
   active: true,
-  birthdate: new Date(2009, 04, 31),
+  birthdate: new Date(517896000000),
   interests: ["MongoDB", "Python", "Ampelmännchen"],
   subobject: {foo: "bar"}
 });
@@ -63,6 +84,7 @@ db.people.insert({
 
 \subsection{JavaScript Enabled}
 \begin{frame}[fragile]
+  \MongoLogo
   JavaScript used for:
   \begin{itemize}
     \item Shell and Documentation
@@ -87,6 +109,7 @@ db.posts.group(
 
 \subsection{Fast, Scalable, Available, and Reliable}
 \begin{frame}
+  \MongoLogo
   \begin{itemize}
   \item Master-Slave replication for Availability and Reliability
     \begin{itemize}
@@ -106,7 +129,8 @@ db.posts.group(
 
 \subsection{Native Language Support}
 
-\begin{frame}{Supported Languages}
+\begin{frame}
+  \MongoLogo
   \begin{block}{Official}
     \begin{itemize}
       \item Python
@@ -128,6 +152,7 @@ db.posts.group(
 
 \subsection{Rich Data Types}
 \begin{frame}[fragile]
+  \MongoLogo
   \begin{block}{JSON}
   \begin{itemize}
     \item String (UTF8)
@@ -145,7 +170,6 @@ db.posts.group(
     \item Int32 / Int64
     \item OID (12 bytes)
     \item Binary (with type byte)
-    \item Regex
   \end{itemize}
   \end{block}
 \end{frame}
@@ -153,6 +177,7 @@ db.posts.group(
   
 \subsection{Atomic Modifiers}
 \begin{frame}[fragile]
+  \MongoLogo
   \begin{itemize}
     \item \$set
     \item \$inc
@@ -175,6 +200,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 
 \begin{frame}[fragile]
   \frametitle{Simple}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.findOne({ user: "mstearn" });
@@ -189,6 +215,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 
 \begin{frame}[fragile]
   \frametitle{Sorted}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -199,6 +226,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 \end{frame}
 \begin{frame}[fragile]
   \frametitle{Paginated}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -209,6 +237,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 \end{frame}
 \begin{frame}[fragile]
   \frametitle{Simple Tag Search}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -222,6 +251,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 
 \begin{frame}[fragile]
   \frametitle{Complex Tag Search}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -235,6 +265,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 
 \begin{frame}[fragile]
   \frametitle{Nested Objects}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -248,6 +279,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 \end{frame}
 \begin{frame}[fragile]
   \frametitle{Regular Expressions}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -262,6 +294,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 \end{frame}
 \begin{frame}[fragile]
   \frametitle{Ranges}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -277,6 +310,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 \end{frame}
 \begin{frame}[fragile]
   \frametitle{Arbitrary JavaScript}
+  \MongoLogo
 
   \begin{verbatim}
   db.posts.find(
@@ -291,12 +325,41 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
   \end{verbatim}
 \end{frame}
 
-\section{Links}
-\subsection{}
+\section{Summary}
+\subsection{Use Cases}
+\begin{frame}
+  \MongoLogo
+  \begin{columns}
+    \begin{column}{.5\linewidth}
+      Good
+      \begin{itemize}
+        \item Websites
+        \item Complex Objects
+        \item High-Volume Low-Value
+        \item Real-time analysis
+      \end{itemize}
+    \end{column}
 
-\begin{frame}{Links}
+    \begin{column}{.5\linewidth}
+      Bad
+      \begin{itemize}
+        \item Not Spelled S-Q-L
+        \item Complex Transactions
+        \item Business Intelligence
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{Links}
+\begin{frame}
+  \MongoLogo
   \begin{itemize}
     \item http://www.mongodb.org
+    \item http://jira.mongodb.org
+    \item http://www.github.com/mongodb/
+  \end{itemize}
+  \begin{itemize}
     \item \#mongodb on irc.freenode.net
     \item mongodb-user on google groups
     \item mathias@10gen.com
