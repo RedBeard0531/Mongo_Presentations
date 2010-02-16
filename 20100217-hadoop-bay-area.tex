@@ -87,8 +87,9 @@
 
 \begin{frame}
   \MongoLogo
-  \center
-  \pgfuseimage{featuregraph}
+  \begin{center}
+    \resizebox{10cm}{!}{\includegraphics{featuresPerformance.png}}
+  \end{center}
 \end{frame}
 
 \section[Outline]{}
@@ -138,7 +139,6 @@ db.people.insert({
   \end{itemize}
 
   \begin{verbatim}
-db.users.find({$where: "this.a + this.b >= 42"});
 db.users.find({$where: "this.a + this.b >= 42"});
 db.posts.group(
   { key: "user"
