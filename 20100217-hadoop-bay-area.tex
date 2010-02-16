@@ -21,17 +21,20 @@
 \usepackage[absolute,overlay]{textpos}
 \setlength{\TPHorizModule}{1mm}
 \setlength{\TPVertModule}{1mm}
-\newcommand{\MongoLogo}{%
+\newcommand{\MongoLogo}{
 \begin{textblock}{14}(2.0,0.7)
   \pgfuseimage{logo}
 \end{textblock}
 }
 
+\pgfdeclareimage[height=2in]{featuregraph}{featuresPerformance.png}
+\pgfdeclareimage[height=2in]{sharding}{sharding.png}
+
 \title{MongoDB}
 \subtitle{Or how I learned to stop worrying and love the database}
 \author{Mathias Stearn}
 \institute{10gen}
-\date{N*SQL Berlin -- October 22th, 2009}
+\date{Bay Area Hadoop Meetup -- February 17, 2010}
 
 %\AtBeginSection[]
 %{
@@ -45,6 +48,47 @@
 \begin{frame}
   \MongoLogo
   \titlepage
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+
+  \begin{quote}
+    The resulting [MongoDB] application has literally changed the way the
+    pharma company conducts business. Whereas in the past, patient queries
+    could take minutes to hours, results are now essentially real-time.
+  \end{quote}
+  \small \url{http://news.cnet.com/8301-13846_3-10451248-62.html}
+
+  \begin{quote}
+    Used the mongodb profiler to help me get a query down from 1000ms down to
+    0ms by adding an index and a filter.
+  \end{quote}
+  \small \url{http://twitter.com/mully/statuses/5583618526}
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+
+  \begin{quote}
+    Compared to hadoop, mongo's speed and startup time make developing new
+    queries much easier; what took us two weeks to get working on hadoop was
+    done in two days on mongo.
+  \end{quote}
+  \small Emmett Shear, CTO (and developer) at Justin.tv
+
+  \begin{quote}
+    It took me half a day to go from not touching MongoDB to writing some
+    fairly good functionality against it. It makes setting up, configuring, and
+    interfacing with MySQL look archaic -- ridiculously archaic.
+  \end{quote}
+  \small \url{http://geekaustin.org/2010/01/31/mongodb-day-geek-austin-data-series}
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+  \center
+  \pgfuseimage{featuregraph}
 \end{frame}
 
 \section[Outline]{}
@@ -74,7 +118,7 @@ db.people.insert({
   karma: 42,
   active: true,
   birthdate: new Date(517896000000),
-  interests: ["MongoDB", "Python", "Ampelmännchen"],
+  interests: ["MongoDB", "Hadoop", "Üñíçøđĕ"],
   subobject: {foo: "bar"}
 });
   \end{verbatim}
@@ -90,10 +134,11 @@ db.people.insert({
     \item Shell and Documentation
     \item (Very) Advanced Queries
     \item ``Group By'' Queries
-    \item MapReduce (new)
+    \item MapReduce
   \end{itemize}
 
   \begin{verbatim}
+db.users.find({$where: "this.a + this.b >= 42"});
 db.users.find({$where: "this.a + this.b >= 42"});
 db.posts.group(
   { key: "user"
@@ -125,6 +170,12 @@ db.posts.group(
   \end{itemize}
 \end{frame}
 
+\begin{frame}
+  \MongoLogo
+  \center
+  \pgfuseimage{sharding}
+\end{frame}
+
 \section{What Makes Mongo Special?}
 
 \subsection{Native Language Integration}
@@ -133,19 +184,21 @@ db.posts.group(
   \MongoLogo
   \begin{block}{Official}
     \begin{itemize}
+      \item Java/JVM
       \item Python
       \item Ruby
-      \item C++
+      \item C/C++
       \item Perl
       \item PHP
-      \item Java
     \end{itemize}
   \end{block}
 
   \begin{block}{Community Supported}
-    Erlang,
+    Closure, 
+    Scala,
     C\#,
-    ColdFusion,
+    Haskell,
+    Erlang,
     {\it and More}
   \end{block}
 \end{frame}
@@ -168,7 +221,7 @@ db.posts.group(
   \begin{itemize}
     \item Date
     \item Int32 / Int64
-    \item OID (12 bytes)
+    \item ObjectID (12 bytes: timestamp + host + pid + counter)
     \item Binary (with type byte)
   \end{itemize}
   \end{block}
@@ -325,44 +378,46 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
   \end{verbatim}
 \end{frame}
 
-\section{Summary}
-\subsection{Use Cases}
-\begin{frame}
-  \MongoLogo
-  \begin{columns}
-    \begin{column}{.5\linewidth}
-      Good
-      \begin{itemize}
-        \item Websites
-        \item Complex Objects
-        \item High-Volume Low-Value
-        \item Real-time analysis
-      \end{itemize}
-    \end{column}
 
-    \begin{column}{.5\linewidth}
-      Bad
-      \begin{itemize}
-        \item Not Spelled S-Q-L
-        \item Complex Transactions
-        \item Business Intelligence
-      \end{itemize}
-    \end{column}
-  \end{columns}
+\section{MapReduce}
+\subsection{In Mongo}
+\begin{frame} [fragile]
+  \MongoLogo
+
+  \begin{small}
+  \begin{verbatim}
+db.posts.mapReduce(
+   function() {
+     this.comments.forEach(x){
+       emit(c.user, 
+            {count:1, words:c.words.length}) } }
+ , function(key, values){
+     for (var i=1; i<values.length; i++){
+       values[0].count += values[i].count;
+       values[0].words += values[i].words; } }
+ , { finalize: function(out){ 
+       out.avg = out.words / out.count;
+       return out;}
+   , query: {posted: {$gt: new Date(2010,0,1)}}
+   , out: 'posts.comment_stats'
+   }
+ });
+  \end{verbatim}
+  \end{small}
 \end{frame}
 
-\subsection{Links}
-\begin{frame}
+\section{}
+\begin{frame}{Links}
   \MongoLogo
   \begin{itemize}
+    \item http://mongo.kylebanker.com (Try mongo in your browser)
     \item http://www.mongodb.org
-    \item http://jira.mongodb.org
-    \item http://www.github.com/mongodb/
-  \end{itemize}
-  \begin{itemize}
     \item \#mongodb on irc.freenode.net
     \item mongodb-user on google groups
+  \end{itemize}
+  \begin{itemize}
     \item mathias@10gen.com
+    \item @mathias\_mongo on titter
   \end{itemize}
 \end{frame}
 
