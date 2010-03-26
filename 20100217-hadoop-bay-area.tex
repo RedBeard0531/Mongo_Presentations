@@ -17,13 +17,12 @@
 \usepackage{hyperref}
 
 % adds the \MongoLogo command to put the logo on a slide
-\pgfdeclareimage[height=0.8cm]{logo}{logo-mongodb-ondark.png}
 \usepackage[absolute,overlay]{textpos}
 \setlength{\TPHorizModule}{1mm}
 \setlength{\TPVertModule}{1mm}
 \newcommand{\MongoLogo}{
 \begin{textblock}{14}(2.0,0.7)
-  \pgfuseimage{logo}
+  \includegraphics[height=0.8cm]{logo-mongodb-ondark.png}
 \end{textblock}
 }
 
@@ -36,12 +35,12 @@
 \institute{10gen}
 \date{Bay Area Hadoop Meetup -- February 17, 2010}
 
-%\AtBeginSection[]
-%{
-  %\begin{frame}<beamer>{}
-    %\tableofcontents[currentsection]
-  %\end{frame}
-%}
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>{}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
 
 \begin{document}
 
@@ -61,17 +60,17 @@
   \small \url{http://news.cnet.com/8301-13846_3-10451248-62.html}
 
   \begin{quote}
-    Used the mongodb profiler to help me get a query down from 1000ms down to
-    0ms by adding an index and a filter.
+    Why bother [with] memcached for caching HTTP sessions when you have an
+    authoritative MongoDB? The performance is there.
   \end{quote}
-  \small \url{http://twitter.com/mully/statuses/5583618526}
+  \small Carl Byström, @cgbystrom on twitter
 \end{frame}
 
 \begin{frame}
   \MongoLogo
 
   \begin{quote}
-    Compared to hadoop, mongo's speed and startup time make developing new
+    Compared to hadoop, Mongo's speed and startup time make developing new
     queries much easier; what took us two weeks to get working on hadoop was
     done in two days on mongo.
   \end{quote}
@@ -85,14 +84,13 @@
   \small \url{http://geekaustin.org/2010/01/31/mongodb-day-geek-austin-data-series}
 \end{frame}
 
-\begin{frame}
-  \MongoLogo
-  \begin{center}
-    \resizebox{10cm}{!}{\includegraphics{featuresPerformance.png}}
-  \end{center}
-\end{frame}
+%\begin{frame}
+  %\MongoLogo
+  %\begin{center}
+    %\includegraphics[height=7cm]{featuresPerformance.png}
+  %\end{center}
+%\end{frame}
 
-\section[Outline]{}
 \begin{frame}
   \MongoLogo
   \tableofcontents
@@ -103,8 +101,8 @@
 \begin{frame}[fragile]
   \MongoLogo
   \begin{itemize}
-    \item Organized into Databases and Collections (like Tables)
     \item Document Oriented
+    \item Organized into Databases and Collections (like Tables)
     \item JSON-like (BSON)
     \item Schemaless
     \item Dynamic, Strong Typing
@@ -119,7 +117,7 @@ db.people.insert({
   karma: 42,
   active: true,
   birthdate: new Date(517896000000),
-  interests: ["MongoDB", "Hadoop", "Üñíçøđĕ"],
+  interests: ["MongoDB", "Python", "Üñíçøđĕ"],
   subobject: {foo: "bar"}
 });
   \end{verbatim}
@@ -153,7 +151,7 @@ db.posts.group(
 \end{frame}
 
 \subsection{Fast, Scalable, Available, and Reliable}
-\begin{frame}
+\begin{frame}{Fast, Scalable, Available, and Reliable}
   \MongoLogo
   \begin{itemize}
   \item Master-Slave replication for Availability and Reliability
@@ -355,7 +353,7 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
     , tags: {$in: ["mongo", "mongodb"]}
     , comments.user: "mdirolf"
     , text: /windows/i
-    , points: {$gt: 10, $lt 100}
+    , points: {$gt: 10, $lt: 100}
     }
   ).sort({timestamp:-1}).skip(10).limit(10);
   \end{verbatim}
@@ -380,7 +378,8 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
 
 
 \section{MapReduce}
-\subsection{In Mongo}
+
+\subsection{Built-In MapReduce}
 \begin{frame} [fragile]
   \MongoLogo
 
@@ -388,16 +387,17 @@ db.tags.update({_id:"mongodb"}, {$inc:{count:1}},
   \begin{verbatim}
 db.posts.mapReduce(
    function() {
-     this.comments.forEach(x){
+     this.comments.forEach(c){
        emit(c.user, 
-            {count:1, words:c.words.length}) } }
+            {count:1, words:c.text.split().length; } }
  , function(key, values){
      for (var i=1; i<values.length; i++){
        values[0].count += values[i].count;
-       values[0].words += values[i].words; } }
- , { finalize: function(out){ 
+       values[0].words += values[i].words; }
+     return values[0]; }
+ , { finalize: function(out){
        out.avg = out.words / out.count;
-       return out;}
+       return out; }
    , query: {posted: {$gt: new Date(2010,0,1)}}
    , out: 'posts.comment_stats'
    }
@@ -406,9 +406,60 @@ db.posts.mapReduce(
   \end{small}
 \end{frame}
 
-\section{}
-\begin{frame}{Links}
+
+\subsection{Easy Hadoop-Mongo Integration}
+\begin{frame}{Easy Hadoop-Mongo Integration}
   \MongoLogo
+
+  \begin{itemize}
+    \item mongoexport can export to JSON/CSV/TSV
+      \begin{itemize}
+        \item Can also easily use a custom script
+      \end{itemize}
+    \item Process in Hadoop
+    \item Use mongoimport to get data back into MongoDB
+  \end{itemize}
+
+\end{frame}
+
+
+\subsection{Better Hadoop-Mongo Integration}
+\begin{frame} {Better Hadoop-Mongo Integration}
+  \MongoLogo
+
+  \begin{itemize}
+    \item mongodump writes a stream of BSON to a file
+    \item Write an InputFilter and RecordReader to read BSON
+    \item Write a BSONWriter class to directly use the data
+      \begin{itemize}
+        \item Just added two methods to driver to make this easier
+      \end{itemize}
+    \item Process the data with the Java/Scala/Closure driver
+    \item Write a custom RecordWriter to either:
+      \begin{itemize}
+        \item Dump to a file and use mongorestore
+        \item Dump the output directly to MongoDB
+      \end{itemize}
+    \item Optional: use renameCollection to mimic our MapReduce
+  \end{itemize}
+
+\end{frame}
+
+\section{}
+
+\begin{frame}{Upcoming events}{}
+  \MongoLogo
+
+  \begin{itemize}
+    \item NoSQL Live! from Boston (March 11)
+    \item MongoDB Training in San Francisco (March 25)
+    \item San Fransisco MySQL Meetup (April 12)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Links}{}
+  \MongoLogo
+
   \begin{itemize}
     \item http://mongo.kylebanker.com (Try mongo in your browser)
     \item http://www.mongodb.org
@@ -417,7 +468,7 @@ db.posts.mapReduce(
   \end{itemize}
   \begin{itemize}
     \item mathias@10gen.com
-    \item @mathias\_mongo on titter
+    \item @mathias\_mongo on twitter
   \end{itemize}
 \end{frame}
 

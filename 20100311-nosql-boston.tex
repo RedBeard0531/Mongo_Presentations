@@ -1,0 +1,140 @@
+\documentclass{beamer}
+
+\usetheme{Warsaw}
+\setbeamerfont*{frametitle}{size=\normalsize,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+%\usefonttheme{professionalfonts}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{ulem}
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{hyperref}
+
+% adds the \MongoLogo command to put the logo on a slide
+\usepackage[absolute,overlay]{textpos}
+\setlength{\TPHorizModule}{1mm}
+\setlength{\TPVertModule}{1mm}
+\newcommand{\MongoLogo}{
+\begin{textblock}{14}(2.0,0.7)
+  \includegraphics[height=1.2cm]{logo-mongodb-ondark.png}
+\end{textblock}
+}
+
+\pgfdeclareimage[height=2in]{featuregraph}{featuresPerformance.png}
+\pgfdeclareimage[height=2in]{sharding}{sharding.png}
+
+\title{What's new in MongoDB 1.4}
+%\subtitle{Or how I learned to stop worrying and love the database}
+\author{Mathias Stearn}
+\institute{10gen}
+\date{NoSQL Live! Boston -- March 11, 2010}
+
+\begin{document}
+
+\begin{frame}
+  \MongoLogo
+  \titlepage
+\end{frame}
+
+\section{}
+\subsection{Concurrency}
+\begin{frame}{Concurrency}
+  \MongoLogo
+  \begin{itemize}
+    \item 1 Writer -- N Readers
+    \item Background Bulk Remove
+      \begin{itemize}
+        \item Can also request atomic removal
+      \end{itemize}
+    \item Background Indexing
+  \end{itemize}
+\end{frame}
+
+\subsection{2D Geospatial Indexes}
+\begin{frame}[fragile]{2D Geospatial Indexes}
+  \MongoLogo
+
+  \begin{verbatim}
+db.people.find({loc: {$near: {x:-74, y:43}}});
+
+{name: "Mathias", loc: {x:-74.5, y:43},
+    $distance=0.5}
+{name: "Dwight", loc: {x:-73, y:43.7},
+    $distance=1.2}
+{name: "Eliot", loc: {x:-75, y:44},
+    $distance=2}
+  \end{verbatim}
+
+\end{frame}
+
+\subsection{FindAndModify Command}
+\begin{frame}[fragile]{FindAndModify Command}
+  \MongoLogo
+  \begin{verbatim}
+db.jobs.findAndModify(
+  { query: {in_progress: false}
+  , sort: {priority: -1}
+  , update: {$set: {in_progress: true}}
+  }
+);
+
+db.jobs.findAndModify( { remove: True });
+  \end{verbatim}
+\end{frame}
+
+\subsection{Easier to work with Embedded Objects}
+\begin{frame}[fragile]{Easier to work with Embedded Objects}
+  \MongoLogo
+  \begin{verbatim}
+db.people.find(
+  {jobs: {$elemMatch: {name: "10gen"
+                      ,current: true}}}
+);
+
+db.posts.update(
+  {"comments.author": "mstearn"}}},
+  {$set: {"comments.$.author": "mathias"}}
+);
+  \end{verbatim}
+\end{frame}
+
+\subsection{Ops Friendliness}
+\begin{frame}{Ops Friendliness}
+  \MongoLogo
+  \begin{itemize}
+    \item Fsync-Lock Command
+      \begin{itemize}
+        \item Flushes the buffers for snapshots
+        \item Slaves can be seeded with snapshots
+      \end{itemize}
+    \item Delayed slaves to prevent ``oopses''
+    \item Drop-in replacement for 1.2
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Links}
+  \MongoLogo
+
+  \begin{itemize}
+    \item http://mongo.kylebanker.com (Try mongo in your browser)
+    \item http://www.mongodb.org
+    \item \#mongodb on irc.freenode.net
+    \item mongodb-user on google groups
+  \end{itemize}
+  \begin{itemize}
+    \item mathias@10gen.com
+    \item @mathias\_mongo on twitter
+  \end{itemize}
+\end{frame}
+
+\end{document}
+
+% vim: set softtabstop=2
