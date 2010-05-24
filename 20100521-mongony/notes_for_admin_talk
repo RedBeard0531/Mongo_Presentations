@@ -1,0 +1,87 @@
+Mathias Stearn presents:
+What Ops guys need to know about MongoDB
+
+@mathias_mongo mathias@10gen.com
+
+
+
+When setting up:
+download and untar (thats it)
+/data/db or custom --dbpath (use XFS or ext4)
+--directoryperdb
+startup and shutdown (ctrl-c or SIGTERM)
+
+
+Getting stats:
+db.serverStatus()
+db.stats()  
+db.collection.stats()
+http://localhost:28017 (server port + 1000)
+http://localhost:28017/_status
+mongostat tool
+
+iostat -x 2
+atop
+
+Monitoring tool plugins:
+Munin ganglia nagios cacti
+
+Code to see stats:
+db.foo.drop()
+for (var i=400000; i<1000000; i++){
+    db.foo.insert({_id: i});
+    for (var j=0; j< 10; j++){
+        db.foo.findOne({_id: (i-j)});
+    }
+}
+Run in many mongo's to boost perf. Use htop to see where time is going. 
+Add a big string to show disk util.
+
+Whats going on right now?
+db.currentOp()
+
+Use this to have a query slow enough to see:
+db.foo.find({$where: 'var i=1000; while(i--); return this.blah != undefined'})
+
+Backup
+mongodump / mongorestore (online-backup)
+locking or shut down
+backup from slave
+db._adminCommand({fsync:1, lock:1})
+db.$cmd.sys.unlock.findOne()
+
+Replication (Just Do It!)
+mongod --master --oplogSize 500
+mongod --slave --source localhost:27017 --port 3000 --dbpath /data/slave
+local.oplog.$main
+seeding a slave from a master (--fastsync)
+delayed replication (--slavedelay secs)
+db.printReplicationInfo()
+db.printSlaveReplicationInfo()
+
+It isn't working!?!?!
+check the logs
+try connecting from the shell
+check http output
+
+Going into production:
+distro pkgs (we have them)
+init scripts (make sure they shut down cleanly)
+--fork
+--logpath (internal rotation)
+did I mention replication?
+
+When there's something strange
+In your server room.
+When you get a page
+at 2am.
+Who you gonna call?
+
+(all together now)
+10gen!
+
+</salepitch>
+
+Questions?
+
+</presentation>
