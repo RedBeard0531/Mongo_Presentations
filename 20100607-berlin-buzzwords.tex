@@ -1,0 +1,383 @@
+\documentclass{beamer}
+
+\usetheme{Warsaw}
+\setbeamerfont*{frametitle}{size=\normalsize,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+%\usefonttheme{professionalfonts}
+
+\usepackage{listings,bera}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{ulem}
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{hyperref}
+
+%\definecolor{fore}{RGB}{249,242,215}
+%\definecolor{back}{RGB}{51,51,51}
+%\definecolor{title}{RGB}{255,0,90}
+%\setbeamercolor{titlelike}{fg=title}
+%\setbeamercolor{normal text}{fg=fore,bg=back}
+
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{60,179,113}
+\definecolor{strings}{RGB}{60,179,60}
+\definecolor{numbers}{RGB}{179,60,60}
+\lstset{language=Python,
+        %extendedchars=false,
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments}\emph,
+        stringstyle=\color{strings},
+        escapechar=!
+        }
+
+% adds the \MongoLogo command to put the logo on a slide
+\usepackage[absolute,overlay]{textpos}
+\setlength{\TPHorizModule}{1mm}
+\setlength{\TPVertModule}{1mm}
+\newcommand{\MongoLogo}{
+\begin{textblock}{14}(2.0,0.7)
+  \includegraphics[height=0.8cm]{logo-mongodb-ondark.png}
+\end{textblock}
+}
+
+\pgfdeclareimage[height=2in]{featuregraph}{featuresPerformance.png}
+\pgfdeclareimage[height=2.5in]{sharding}{sharding.png}
+
+\title{MongoDB}
+\subtitle{You got a Database in my Key-Value Store!}
+\author{Mathias Stearn \\ @mathias\_mongo}
+\institute{ \includegraphics[height=0.8cm]{10gen.png} }
+\date{Berlin Buzzwords -- 7 June 2010}
+
+%\AtBeginSection[]
+%{
+  %\begin{frame}<beamer>{}
+    %\MongoLogo
+    %\tableofcontents[currentsection]
+  %\end{frame}
+%}
+
+
+\begin{document}
+
+\begin{frame}
+  \MongoLogo
+  \titlepage
+  
+  \begin{center}
+    Find this presentation at bit.ly/mongodb-berlin-buzzwords
+
+    \small Can people in the back read this line?
+  \end{center}
+\end{frame}
+
+%\begin{frame}
+  %\MongoLogo
+  %\tableofcontents
+%\end{frame}
+
+\begin{frame}
+  \MongoLogo
+
+  \begin{block}{ {\color{red} Warning:} MongoDB is not fully buzzword compliant!!!}
+    \begin{itemize}
+      \item Binary protocal not HTTP/REST
+      \item BSON not ``pure'' JSON
+      \item C++ not Erlang
+      \item Queries use Indexes not MapReduce
+      \item B-Trees not Hashing
+    \end{itemize}
+    
+  \end{block}
+
+\end{frame}
+
+\section{CRUD in MongoDB}
+
+\subsection{Create}
+\begin{frame}[fragile]{Inserting}
+  \MongoLogo
+
+\begin{lstlisting}
+db.users.insert( {
+   _id:'mstearn',
+   company: '10gen',
+   name: {first:'Mathias',
+          last:'Stearn'}
+   likes: ['Bier', '!\color{strings}Ampelmännchen!', 'Python']
+   posts: 42
+
+   addresses: [
+     {street: '17 W 18th St', floor: '8',
+      city: 'New York', state:'NY', zip: '10019'},
+     {street: '123 Fake St', country: 'Elbonia'}
+   ]
+})
+\end{lstlisting}
+\end{frame}
+
+\subsection{Retrieve}
+\begin{frame}[fragile]{Querying}
+  \MongoLogo
+
+  \begin{lstlisting}
+db.users.findOne({_id: 'mstearn'}))
+db.users.find({company: '10gen'})
+db.users.find({posts: {$gte: 40, $lt: 50}}) 
+db.users.find({'name.last': 'Stearn'})
+
+db.users.ensureIndex({knows: 1})
+
+db.users.find({likes: 'Bier'})
+db.users.find({likes: {$in:['Bier', 'Beer']}})
+db.users.find({likes: {$all:['Bier', 'Milch']}})
+db.users.find({likes: /^Py/})
+db.users.find().sort({posts:-1}).skip(10).limit(10)
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Pretty Queries with MongoMagic}
+  \MongoLogo
+
+  \begin{block}{Shameless self-promotion}
+    \url{http://github.com/RedBeard0531/MongoMagic/}
+  \end{block}
+
+  \begin{lstlisting}
+db.users.find( M._id == 'mstearn' )
+db.users.find( M.company == '10gen' )
+db.users.find( 40 <= M.posts < 50 ) 
+db.users.find( M.name.last == 'Stearn' )
+db.users.find( M.likes.IN('Bier', 'Beer') )
+db.users.find( M.likes.ALL('Bier', 'Milch') )
+db.users.find( M.likes.STARTSWITH('Py') )
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{2D Geospatial Queries}
+  \MongoLogo
+
+  \small
+  \begin{lstlisting}
+db.zips.insert({_id: '10011', loc: [43, -74]})
+
+db.zips.ensureIndex({loc: '2d'})
+
+db.zips.find({loc: {$near: [43, -74]}})
+
+var box = [[x1, y1], [x2, y2]]
+db.zips.find({loc: {$within: {$box: box}}})
+
+var circle = [[x,y], radius]
+db.zips.find({loc: {$within: {$center: circle}}})
+                 
+  \end{lstlisting}
+\end{frame}
+
+
+\subsection{Update}
+\begin{frame}[fragile]{Updating}
+  \MongoLogo
+
+  \small
+  \begin{lstlisting}
+db.posts.insert({_id: ObjectId(123),
+                 by: 'mstearn',
+                 title: 'Why is MongoDB Awesome?',
+                 body: 'It just is MASSIVE TYPO',
+                 tags: [] })
+
+db.posts.update({_id: ObjectId(123)},
+                {$set: {body: 'It just is' }})
+
+db.posts.update({_id: ObjectId(123)},
+                {$addToSet: {tags: 'Citation Needed'}})
+
+db.tags.update({_id: 'Citation Needed'},
+               {$inc: {count: 1}},
+               {upsert: true})
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Updating in an Array}
+  \MongoLogo
+
+  \small
+  \begin{lstlisting}
+
+db.posts.update({_id: ObjectId(123)},
+                {$push: {comments:
+                    {id: ObjectId(987),
+                     by:'joe_schmoe',
+                     text:'I Agree'}}})
+
+db.posts.update({_id: ObjectId(123), comments.id: ObjectID(987)},
+                {$inc: {comments.$.votes: 1}})
+
+  \end{lstlisting}
+\end{frame}
+
+\subsection{Delete}
+\begin{frame}[fragile]{Removing}
+  \MongoLogo
+
+  \begin{lstlisting}
+db.stuff.remove({_id: SOME_ID})
+db.stuff.remove({any: query})
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Sidenote: Primary Keys}
+  \MongoLogo
+
+  \begin{itemize}
+    \item Always called ``\_id''
+    \item Automatically indexed
+    \item Can be any type (except array)
+    \item If you don't supply one, one will be created for you
+    \item ObjectId(``{\color{green}DEADBEEF}
+                     {\color{blue}C0FFEE}
+                     {\color{orange}ABBA}
+                     {\color{red}BADFEE}'')
+         \begin{itemize}
+           \item {\color{green} 4-Byte Timestamp (second)}
+           \item {\color{blue} 3-Byte Machine ID}
+           \item {\color{orange} 2-Byte PID}
+           \item {\color{red} 3-Byte Incrementing Counter}
+           \item Total: 12 Bytes (not 24)
+         \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+
+\section{Replication}
+
+\begin{frame}[fragile]{Replication}
+  \MongoLogo
+
+  \begin{itemize}
+      \item Replication: Just Do It!
+        \begin{itemize}
+          \item No durability guarantees without clean shutdowns
+        \end{itemize}
+      \item Master-Slave not \sout{Potentially} Eventually Consistent
+      \item Automatic fail-over
+        \begin{itemize}
+          \item Replica Pairs (Depricated)
+          \item Replica Sets (Coming in 1.6)
+        \end{itemize}
+      \item Slaves do an initial sync then pull operations
+      \item Initial sync can be skipped if starting from snapshot
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Replication Live Demo (If there's time)}
+  \MongoLogo
+
+  \begin{block}{Setup}
+    \tiny
+    \begin{verbatim}
+rm -rf /tmp/{master,slave}
+mkdir /tmp/{master,slave}
+./mongod --master --dbpath /tmp/master --port 2000 > /tmp/master/log &
+./mongod --slave  --dbpath /tmp/slave  --port 5000 --source localhost:2000 > /tmp/slave/log &
+multitail  /tmp/{master,slave}/log
+    \end{verbatim}
+  \end{block}
+
+  \begin{block}{Master Shell}
+    \tiny
+    \begin{verbatim}
+mongo --port 2000
+db.foo.insert({_id:1, count:1})
+db.foo.update({_id:1}, {$inc: {count:1}})
+db.foo.find()
+use local
+db.oplog.$main.find({op: {$ne: 'n'}})
+    \end{verbatim}
+  \end{block}
+
+  \begin{block}{Slave Shell}
+    \tiny
+    \begin{verbatim}
+mongo --port 5000
+db.foo.find()
+    \end{verbatim}
+  \end{block}
+
+\end{frame}
+
+
+\section{Sharding}
+\begin{frame}[fragile]{Sharding: Preface}
+  \MongoLogo
+  \begin{itemize}
+    \item You {\tiny (probably)} don't need sharding!
+
+    \item Wordnik.com has 1.5TB in over 5 Billion docs
+      \begin{itemize}
+        \item Sustained 100,000 inserts per second during loading
+        \item Sustained 250,000 fetches per second during testing
+        \item Production Queries are 4x faster than old MySQL setup
+      \end{itemize}
+
+    \item Speed and Scalability are different things
+      \begin{itemize}
+        \item But you only need scalability if you're too slow
+      \end{itemize}
+
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Sharding: Details}
+  \MongoLogo
+  \begin{itemize}
+    \item No single point of failure
+    \item Automatic range-based partitioning
+    \item You app connects to a $mongos$ rather than a $mongod$
+    \item You pick which collections are sharded
+    \item You pick a shard-key for those collections
+    \item No other changes are necessary in your app
+    \item We handle the rest!
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+  \center
+  \pgfuseimage{sharding}
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+
+  \center {\huge Questions?}
+
+  \begin{block}{Links}
+  \begin{itemize}
+    \item http://media.mongodb.org/zips.json (for workshop)
+    \item http://try.mongodb.org (Try mongo in your browser)
+    \item http://www.mongodb.org
+    \item \#mongodb on irc.freenode.net
+    \item mongodb-user on google groups
+  \end{itemize}
+  \end{block}
+
+  \begin{block}{Contact}
+  \begin{itemize}
+    \item mathias@10gen.com
+    \item @mathias\_mongo ${\leftarrow}$ follow me!
+    \item Or just find me here or at LinuxTag
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\end{document}
+
+% vim: set softtabstop=2
