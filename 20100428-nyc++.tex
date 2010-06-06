@@ -1,0 +1,280 @@
+\documentclass{beamer}
+
+\usetheme{Warsaw}
+\setbeamerfont*{frametitle}{size=\normalsize,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+%\usefonttheme{professionalfonts}
+
+\usepackage{listings,bera}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{ulem}
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{hyperref}
+
+%\definecolor{fore}{RGB}{249,242,215}
+%\definecolor{back}{RGB}{51,51,51}
+%\definecolor{title}{RGB}{255,0,90}
+%\setbeamercolor{titlelike}{fg=title}
+%\setbeamercolor{normal text}{fg=fore,bg=back}
+
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{60,179,113}
+\definecolor{strings}{RGB}{60,179,60}
+\definecolor{numbers}{RGB}{179,60,60}
+\lstset{language=C++,
+        extendedchars=false,
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{strings},
+        escapechar=@
+        }
+
+% adds the \MongoLogo command to put the logo on a slide
+\usepackage[absolute,overlay]{textpos}
+\setlength{\TPHorizModule}{1mm}
+\setlength{\TPVertModule}{1mm}
+\newcommand{\MongoLogo}{
+\begin{textblock}{14}(2.0,0.7)
+  %\includegraphics[height=0.8cm]{logo-mongo-ondark.png}
+\end{textblock}
+}
+
+\pgfdeclareimage[height=2in]{featuregraph}{featuresPerformance.png}
+\pgfdeclareimage[height=2.5in]{sharding}{sharding.png}
+
+\title{Dynamic C++}
+\subtitle{Or how to write python code in C++}
+\author{Mathias Stearn}
+\institute{ \includegraphics[height=0.8cm]{10gen.png} }
+\date{NYC++ Meetup -- April 28, 2010}
+
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>{}
+    \MongoLogo
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}
+  \MongoLogo
+  \tableofcontents
+\end{frame}
+
+\section{boost::any}
+
+\begin{frame}{What is boost::any}
+  \MongoLogo
+  \begin{itemize}
+    \item A discriminated, type-safe union of all types
+      \begin{itemize}
+        \item read: a better void*
+      \end{itemize}
+    \item You can assign anything to it
+    \item It knows what you put put in
+    \item You get out what you put in
+      \begin{itemize}
+        \item No conversions between types
+        \item Not even numeric types
+      \end{itemize}
+    \item Value semantics (copies actually copy)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile] {Basic usage}
+  \MongoLogo
+  \begin{lstlisting}
+boost::any a(1);
+a = 1.0;
+a = "1";
+a = string("1");
+
+any_cast<string>(a).c_str();
+any_cast<string&>(a) = "hello";
+
+any_cast<int>(a); //throws bad_any_cast
+any_cast<int>(&a); //return null
+
+a.type() == typeid(string);
+a.type() != typeid(int);
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile] {Usage in collection}
+  \MongoLogo
+
+  \begin{lstlisting}
+typedef std::vector<boost::any> many
+
+many array;
+array.push_back(42);
+array.push_back("Mathias");
+  \end{lstlisting}
+
+  \pause
+
+  \begin{lstlisting}
+BOOST_FOREACH(const any& item, many){
+    if (int* i = any_cast<int>(&item))
+        cout << *i << endl;
+    else if (string* s = any_cast<string>(&item))
+        cout << *s << endl;
+    else
+        assert(!"unrecognized type");
+}
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile] {Usage in collection cont.}
+  \MongoLogo
+
+  \begin{lstlisting}
+typedef std::vector<boost::any> many
+
+many slice(many array, int skip, int limit){
+    many out;
+    BOOST_FOREACH(any& item, many){
+      if (skip) { skip--; continue }
+      if (limit-- == 0) break;
+
+      out.push_back(item);
+    }
+    return out;
+}
+  \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile] {Virtual Methods}
+  \MongoLogo
+
+  \begin{lstlisting}
+class Example{
+    // This is illegal!
+    template <typename T>
+    virutal void doSomething(const T& anything);
+
+    // This is ok
+    virutal void doSomething(boost::any anything);
+}
+  \end{lstlisting}
+\end{frame}
+
+\section{boost::variant}
+\begin{frame}{What is boost::variant}
+  \MongoLogo
+  \begin{itemize}
+    \item A discriminated, type-safe union of selected types
+      \begin{itemize}
+        \item read: Haskell/ML types in C++
+      \end{itemize}
+    \item You declare the supported types
+    \item Stack-based storage
+    \item Uses visitor pattern for access
+    \item Feels ``cleaner'' than boost::any
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile] {Basic usage}
+  \MongoLogo
+  \begin{lstlisting}
+    typedef boost::variant<int, double> number;
+    number n = 1;
+    n = 1.0;
+    
+    cout << n << endl; // built-in
+
+    get<double>(n);
+    get<int>(n); // throws bad_get
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile] {Visitors}
+  \MongoLogo
+  \begin{lstlisting}
+struct Square : boost::static_visitor<>{
+  void operator()(int& i) { i*= i; }
+  void operator()(double& d) { d *= d; }
+} square;
+
+number n = 10;
+apply_visitor(square, n);
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile] {Nicer Visitors}
+  \MongoLogo
+  \begin{lstlisting}
+struct Square : boost::static_visitor<>{
+  void operator()(int& i) const { i*= i; }
+  void operator()(double& d) const { d *= d; }
+  void operator()(number& n) const {
+    apply_visitor(Square(), n);
+  }
+} square;
+
+number n = 10;
+square(n);
+  \end{lstlisting}
+\end{frame}
+
+\section{BSON}
+\begin{frame}{What is BSON}
+  \MongoLogo
+  \begin{itemize}
+    \item A binary JSON format used in MongoDB
+    \item Supports nested objects and arrays
+    \item Supports a fixed set of types
+    \item Objects are ``frozen'' once created
+    \item Nice C++ library
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile] {Basic usage}
+  \MongoLogo
+  \small
+  \begin{lstlisting}
+BSONObj obj =
+    BSON( "name" << BSON( "first" << "Mathias"
+                      << "last" << "Stearn")
+       << "company" << "10gen"
+       << "languages" << BSON_ARRAY( "C++"
+                                  << "Python");
+       << "minions" << 0
+       )
+
+obj["name"].type() == Object;
+obj["name"]["first"].type() == String;
+obj["minions"].type() == Int;
+
+BSONObj nameobj = obj["name"].embeddedObject();
+string fullname = name["first"].String() + " "
+                + name["last"].String();
+                        
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile] {Basic usage}
+  \MongoLogo
+  \huge
+  Questions?
+\end{frame}
+
+
+\end{document}
+
+% vim: set softtabstop=2
