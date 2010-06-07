@@ -159,6 +159,20 @@ db.users.find( M.likes.STARTSWITH('Py') )
   \end{lstlisting}
 \end{frame}
 
+\begin{frame}[fragile]{Selecting Fields}
+  \MongoLogo
+
+  \begin{lstlisting}
+db.posts.find({}, {comments: 1})
+db.posts.find({}, {comments: 0})
+db.posts.find({}, {'comments.by': 1})
+
+db.posts.find({}, {comments: $slice: 10})
+db.posts.find({}, {comments: $slice: -10})
+db.posts.find({}, {comments: $slice: [10, 10]})
+  \end{lstlisting}
+\end{frame}
+
 \begin{frame}[fragile]{2D Geospatial Queries}
   \MongoLogo
 
