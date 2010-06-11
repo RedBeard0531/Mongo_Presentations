@@ -131,7 +131,7 @@ db.users.find({company: '10gen'})
 db.users.find({posts: {$gte: 40, $lt: 50}}) 
 db.users.find({'name.last': 'Stearn'})
 
-db.users.ensureIndex({knows: 1})
+db.users.ensureIndex({likes: 1})
 
 db.users.find({likes: 'Bier'})
 db.users.find({likes: {$in:['Bier', 'Beer']}})
@@ -354,7 +354,7 @@ db.foo.find()
   \begin{itemize}
     \item No single point of failure
     \item Automatic range-based partitioning
-    \item You app connects to a $mongos$ rather than a $mongod$
+    \item Your app connects to a $mongos$ rather than a $mongod$
     \item You pick which collections are sharded
     \item You pick a shard-key for those collections
     \item No other changes are necessary in your app
