@@ -97,12 +97,14 @@ function geo_with_zips() {
 }
 
 function map_reduce_with_zips() {
+    // SELECT sum(pop) from zips GROUP BY state
     function map1(){ emit(this.state, this.pop);  }
     function reduce1(key, values){ return Array.sum(values);  }
     db.zips.mapReduce(map1, reduce1, {out:'states.simple'});
     print('done with simple');
     printjson(db.states.simple.findOne({_id:'NY'}))
 
+    // SELECT sum(1), sum(pop) from zips GROUP BY state
     function map2(){ emit(this.state, {pop:this.pop, count:1});  }
     function reduce2(key, values){
         for (var i=1; i<values.length; i++){
@@ -115,6 +117,7 @@ function map_reduce_with_zips() {
     print('done with more');
     db.states.more.find().sort({'value.pop':-1}).limit(5).forEach(printjson);
 
+    // SELECT sum(1) as count, sum(pop), avg(pop) from zips GROUP BY state, city
     function map3(){ emit({state:this.state, city:this.city},
                           {pop:this.pop, count:1}); }
     function avg(key, value){ 
