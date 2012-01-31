@@ -18,23 +18,23 @@ db.stats()
 db.collection.stats()
 http://localhost:28017 (server port + 1000)
 http://localhost:28017/_status
-mongostat tool
+mongostat tool (--discover)
 
 iostat -x 2
 atop
+htop
 
 Monitoring tool plugins:
 Munin ganglia nagios cacti
 
 Code to see stats:
 db.foo.drop()
-for (var i=400000; i<1000000; i++){
+for (var i=0; i<1000000; i++){
     db.foo.insert({_id: i});
     for (var j=0; j< 10; j++){
         db.foo.findOne({_id: (i-j)});
     }
 }
-Run in many mongo's to boost perf. Use htop to see where time is going. 
 Add a big string to show disk util.
 
 Whats going on right now?
@@ -71,15 +71,8 @@ init scripts (make sure they shut down cleanly)
 --logpath (internal rotation)
 did I mention replication?
 
-When there's something strange
-In your server room.
-When you get a page
-at 2am.
-Who you gonna call?
-
-(all together now)
-10gen!
-
+If you'd like to sanity check your deployment plan,
+10gen offers "lightning consults" by the hour.
 </salepitch>
 
 Questions?

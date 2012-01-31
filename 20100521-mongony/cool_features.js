@@ -1,33 +1,92 @@
 // use load('this_file.js') in mongo shell
 
 function title_page(){
-    msg = ["      Mathias Stearn presents:"
-          ,"Geospatial Queries and Other Cool Stuff"
+    msg = ["Mathias Stearn presents:"
+          ,"   Intro to MongoDB"
           ,""
-          ," http://confmirror.10gen.com/zips.json"
-          ,""
-          ,"       @mathias_mongo @mongodb"
-          ,""
-          ,"      #MongoNYC -- May 21, 2010"
+          ,"@mathias_mongo @mongodb"
+          ,"   mathias@10gen.com"
           ].join('\n');
 
     runProgram('sh', '-c', 'echo "' + msg + '" | cowsay -n -T "U  "');
 }
 
-function i_am_lost(){
-    print("DON'T PANIC");
-    help();
+function crud(){
+    db.dropDatabase(); // start clean (useful when running multiple times)
+
+    var post = {
+        title: "My First Post",
+        body: "I wrote something",
+        author: "mathias",
+    };
+
+    db.posts.save(post); // create or update
+    printjson(post);
     print('\n-----\n');
 
-    db.help();
+    printjson(post._id.getTimestamp());
     print('\n-----\n');
 
-    db.collection.help();
+    post.body += "!";
+    post.edited = true;
+    db.posts.save(post); // updating
+    post = db.posts.findOne({_id: post._id}) // retrieve
+    printjson(post);
     print('\n-----\n');
 
-    // Any function without () will print code
-    // On the REPL, printjson is called for you automatically
-    printjson(i_am_lost);
+    var comment = {
+        _id: ObjectId(),
+        by: 'richard',
+        text: 'you should write more',
+    };
+    db.posts.update({_id: post._id}, 
+                    {$push: {comments: comment}, $inc: {nComments: 1}});
+
+    var reply = {
+        _id: ObjectId(),
+        inReplyTo: comment._id,
+        by: 'mathias',
+        text: 'does this count?',
+    };
+    db.posts.update({_id: post._id},
+                    {$push: {comments: reply}, $inc: {nComments: 1}});
+
+    post = db.posts.findOne({'comments.by': 'richard'})
+    printjson(post);
+    print('\n-----\n');
+
+
+    db.posts.update({_id: post._id, 'comments._id': comment._id},
+                    {$set: {'comments.$.text': "you shouldn't write more"}});
+
+    db.posts.update({_id: post._id}, {$pull: {comments: {_id: reply._id}},
+                                      $inc: {nComments:-1}});
+
+
+    db.posts.ensureIndex({'comments.by': 1});
+    printjson( db.posts.findOne({'comments.by': 'mathias'}) )
+    post = db.posts.findOne({'comments.by': 'richard'})
+    printjson(post);
+    print('\n-----\n');
+
+    ['short', 'sweet', 'stupid'].forEach(function(tag){
+        db.posts.update({_id: post._id}, {$addToSet: {tags: tag}});
+        db.tags.update({_id: tag}, {$inc: {count:1}}, true/*upsert*/);
+    });
+
+    post = db.posts.findOne({tags: 'stupid'})
+    printjson(post);
+    db.tags.find().forEach(printjson);
+    print('\n-----\n');
+
+    print( db.posts.count({tags: {$in: ['smart', 'stupid']}}) );
+    print( db.posts.count({tags: {$all: ['smart', 'stupid']}}) );
+    print( db.posts.count({tags: {$all: ['short', 'stupid']}}) );
+}
+
+function show_oplog(){
+    local = db.getSisterDB('local') // "use local" in shell
+    local.oplog.$main.find({op:{$ne:'n'}}).forEach(printjson)
 }
 
 function fun_with_arrays(){
@@ -42,7 +101,6 @@ function fun_with_arrays(){
     db.arrays.find({tags: {$all: ['a', 'e']}}) // none
     db.arrays.find({tags: {$all: ['c', 'd']}}) // 2, 3
 
-    // $slice is new in 1.5.1
     db.arrays.find({_id:1}, {tags: {$slice:1}}) //['a']
     db.arrays.find({_id:1}, {tags: {$slice:-1}}) //['c']
     db.arrays.find({_id:1}, {tags: {$slice:[1,2]}}) //['b', 'c']
@@ -53,41 +111,43 @@ function fun_with_arrays(){
 }
 
 function import_zips() {
-    runProgram('wget', '-N', 'http://media.mongodb.org/zips.json');
-    runProgram('mongoimport', 'zips.json', '-d', 'geo', '-c', 'zips', '--drop');
+    runProgram('mongoimport','zips.json', '-d', 'geo', '-c', 'zips', '--drop');
 }
 
 function play_with_zips() {
     db = db.getSisterDB('geo');
     db.zips.find().limit(2).forEach(printjson);
 
-    //db.zips.ensureIndex({zip:1}) // queries are fast w/o index
-    printjson(db.zips.findOne({zip:'10011'}));
-    printjson(db.zips.findOne({zip:/^1001/}));
-    db.zips.find({zip:{$gte:'1001', $lt:'1002'}}).forEach(printjson);
+    printjson(db.zips.findOne({_id:'10011'}));
+    printjson(db.zips.findOne({_id:/^1001/}));
+    db.zips.find({_id:{$gte:'1001', $lt:'1002'}}).forEach(printjson);
 
     printjson(db.zips.count({city:'NEW YORK'}));
     printjson(db.zips.count({city:'NEW YORK', state:{$ne:'NY'}}));
     printjson(db.zips.count({city:/NEW YORK/, state:{$ne:'NY'}}));
-    printjson(db.zips.find({city:/NEW YORK/, state:{$ne:'NY'}}));
+    printjson(db.zips.findOne({city:/NEW YORK/, state:{$ne:'NY'}}));
 
     printjson(db.zips.count({pop:1}));
     printjson(db.zips.count({pop:0}));
     db.zips.find().sort({pop:-1}).limit(10).forEach(printjson);
-
-    // shameless plug for github.com/RedBeard0531/MongoMagic
 }
 
 function geo_with_zips() {
     db = db.getSisterDB('geo');
     db.zips.ensureIndex({loc:'2d', state:1});
 
-    our_loc = db.zips.findOne({zip: '10011'}).loc;
+    our_loc = db.zips.findOne({_id: '10011'}).loc;
     printjson(our_loc);
+    print('\n-----\n');
 
-    // note our geospatial queries currently assume a flat earth
     db.zips.find({loc: {$near: our_loc}}).limit(5).forEach(printjson);
+    print('\n-----\n');
     printjson(db.runCommand({geoNear:'zips', near:our_loc, num:5}));
+    print('\n-----\n');
+
+    // google for "radius of the earth in km"
+    printjson(db.runCommand({geoNear:'zips', near:our_loc, num:5, spherical:true, distanceMultiplier:6378.1}));
+    print('\n-----\n');
 
     print(db.zips.count({loc: {$within: {$box: [[40, 73], [41, 74]]}}}));
     print(db.zips.count({loc: {$within: {$center: [our_loc, 0.5]}}}));
@@ -104,7 +164,7 @@ function map_reduce_with_zips() {
     print('done with simple');
     printjson(db.states.simple.findOne({_id:'NY'}))
 
-    // SELECT sum(1), sum(pop) from zips GROUP BY state
+    // SELECT sum(1) as count, sum(pop) as pop from zips GROUP BY state
     function map2(){ emit(this.state, {pop:this.pop, count:1});  }
     function reduce2(key, values){
         for (var i=1; i<values.length; i++){
@@ -131,14 +191,33 @@ function map_reduce_with_zips() {
 }
 
 function auto_increment(){
-    db.counters.save({_id:'some id', value:0});
+    //db.counters.save({_id:'some id', value:0});
     function get(){
         return db.counters.findAndModify({
                     query:{_id:'some id'},
-                    update:{$inc:{value:1}}})
+                    update:{$inc:{value:1}},
+                    upsert: true,
+                    'new': true});
     }
-    printjson(get()); // {_id: 'my_counter, value: 0}
-    printjson(get().value); // 1
+    printjson(get()); // {_id: 'my_counter, value: 1}
     printjson(get().value); // 2
     printjson(get().value); // 3
+    printjson(get().value); // 4
 }
+
+function mega_insert() {
+    var big_string = 'x';
+    while (big_string.length < 1024)
+        big_string += big_string;
+
+    for (var i=0; i < 10*1000; i++)
+        db.bar.insert({_id:ObjectId(), key:i, big_string:big_string})
+}
+
+
+
+
+
+
+
+
